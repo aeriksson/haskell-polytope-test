@@ -12,7 +12,7 @@ modules:
       - id: cmd
         info: The command to run. Runs a Python shell if left blank.
         name: Command
-        type: [maybe, [either, str, [str]]]
+        type: [default, [either, str, [str]], ghci]
       - id: env
         info: Environment variables for the container.
         name: Environment variables
@@ -35,19 +35,11 @@ modules:
         type: [maybe, {policy: [enum, always, on-failure], max-restarts: [maybe, int]}]
     module: polytope/container
     args:
-      cmd: |-
-        #pt-clj
-        (or (:cmd params) "ghci")
+      cmd: "#pt-param cmd"
       env: "#pt-param env"
       id: "#pt-param id"
       image: "#pt-param image"
-      mounts: |-
-        #pt-clj
-        (vec
-         (concat
-          (when-let [code (:code params)]
-            [{:path "/app", :source code}])
-          (:mounts params)))
+      mounts: '#pt-clj (concat (:mounts params) (when-let [code (:code params)] [{:path "/app", :source code}]))'
       restart: "#pt-param restart"
       services: "#pt-param services"
       workdir: /app
