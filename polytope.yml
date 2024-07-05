@@ -1,0 +1,74 @@
+modules:
+  - id: haskell
+    params:
+      - id: image
+        info: The container image to use.
+        name: Version
+        type: [default, str, 'haskell:9.6.5-buster']
+      - id: code
+        info: Optional source code directory to mount into the container.
+        name: Code
+        type: [maybe, mount-source]
+      - id: cmd
+        info: The command to run. Runs a Python shell if left blank.
+        name: Command
+        type: [maybe, [either, str, [str]]]
+      - id: env
+        info: Environment variables for the container.
+        name: Environment variables
+        type: [maybe, [[maybe, env-var]]]
+      - id: services
+        info: Ports in the container to expose as services.
+        name: Services
+        type: [maybe, [service-spec]]
+      - id: id
+        info: The container's ID/name.
+        name: ID
+        type: [maybe, id]
+      - id: mounts
+        info: Additional files or directories to mount into the container.
+        name: Mounts
+        type: [maybe, [[maybe, {source: mount-source, path: absolute-path}]]]
+      - id: restart
+        info: What policy to apply on restarting containers that fail.
+        name: Restart policy
+        type: [maybe, {policy: [enum, always, on-failure], max-restarts: [maybe, int]}]
+    module: polytope/container
+    args:
+      cmd: |-
+        #pt-clj
+        (or (:cmd params) "ghci")
+      env: "#pt-param env"
+      id: "#pt-param id"
+      image: "#pt-param image"
+      mounts: |-
+        #pt-clj
+        (vec
+         (concat
+          (when-let [code (:code params)]
+            [{:path "/app", :source code}])
+          (:mounts params)))
+      restart: "#pt-param restart"
+      services: "#pt-param services"
+      workdir: /app
+  - id: haskell-project
+    params:
+      - id: cmd
+        info: The command to run.
+        name: Command
+        type: [default, [either, str, [str]], 'stack run']
+    module: haskell
+    args:
+      code: {type: host, path: ./haskell-project}
+      cmd: "#pt-param cmd"
+      mounts:
+        - source:
+            type: volume
+            id: stack-cache
+            scope: project
+          path: '/root/.stack'
+      services:
+        - id: http
+          ports:
+            - port: 8080
+              protocol: http
